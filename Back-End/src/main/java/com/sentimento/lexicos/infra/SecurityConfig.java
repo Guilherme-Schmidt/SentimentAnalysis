@@ -23,7 +23,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Desabilita CSRF
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Habilita CORS
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/users/register", "/users/login", "/lexical/*").permitAll()
+                        .requestMatchers("/users/register", "/users/login", "/lexical/**").permitAll()
                         .anyRequest().authenticated()
                 );
 

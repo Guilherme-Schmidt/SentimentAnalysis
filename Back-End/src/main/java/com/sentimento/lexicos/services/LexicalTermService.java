@@ -4,7 +4,9 @@ package com.sentimento.lexicos.services;
 import com.sentimento.lexicos.domain.LexicalTerm;
 import com.sentimento.lexicos.repositories.LexicalTermRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +17,9 @@ public class LexicalTermService {
     private LexicalTermRepository lexicalTermRepository;
 
     public LexicalTerm addTerm(LexicalTerm lexicalTerm) {
+        if(lexicalTerm.getPolarity()!=1 && lexicalTerm.getPolarity()!= -1){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Polaridade deve ser 1 ou -1.");
+        }
         return lexicalTermRepository.save(lexicalTerm);
     }
 

@@ -1,96 +1,108 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import '../styles/dashboard.css';
 
 const Dashboard = () => {
-    const [term, setTerm] = useState('');
     const [terms, setTerms] = useState([]);
+    const [term, setTerm] = useState('');
+    const [polarity, setPolarity] = useState('');
     const [editingTermId, setEditingTermId] = useState(null);
     const [errorMessage, setErrorMessage] = useState('');
+    const navigate = useNavigate();
 
-    // Função para carregar os termos
-    const loadTerms = async () => {
-        try {
-            const response = await axios.get('http://localhost:8080/terms'); // Endpoint para obter termos
-            setTerms(response.data);
-        } catch (error) {
-            console.error('Erro ao carregar termos:', error);
-            setErrorMessage('Erro ao carregar termos. Tente novamente.');
-        }
-    };
-
-    // useEffect para carregar os termos ao montar o componente
     useEffect(() => {
-        loadTerms();
+        const fetchTerms = async () => {
+            try {
+                const response = await axios.get('http://localhost:8080/lexical/listTerms');
+                setTerms(response.data);
+            } catch (error) {
+                setErrorMessage("Erro ao carregar os termos.");
+                console.error("Erro ao carregar os termos:", error);
+            }
+        };
+        fetchTerms();
     }, []);
 
-    // Função para adicionar ou editar um termo
-    const handleSubmit = async (e) => {
+    const handleAddOrUpdateTerm = async (e) => {
         e.preventDefault();
+        if (!term || !polarity) return;
 
         try {
             if (editingTermId) {
-                // Editar termo existente
-                await axios.put(`http://localhost:8080/terms/${editingTermId}`, { term });
+                // Atualiza o termo existente
+                await axios.put(`http://localhost:8080/lexical/updateTerm/${editingTermId}`, { term, polarity });
+                setEditingTermId(null);
             } else {
-                // Adicionar novo termo
-                await axios.post('http://localhost:8080/terms', { term });
+                // Adiciona um novo termo
+                await axios.post('http://localhost:8080/lexical/addTerms', { term, polarity });
             }
-            setTerm(''); // Limpar campo
-            setEditingTermId(null); // Resetar estado de edição
-            loadTerms(); // Recarregar termos
+            // Limpa os campos
+            setTerm('');
+            setPolarity('');
+            // Atualiza a lista de termos
+            const response = await axios.get('http://localhost:8080/lexical/listTerms');
+            setTerms(response.data);
         } catch (error) {
-            console.error('Erro ao salvar termo:', error);
-            setErrorMessage('Erro ao salvar termo. Tente novamente.');
+            setErrorMessage('Erro ao adicionar ou atualizar o termo. Tente novamente.');
         }
     };
 
-    // Função para editar um termo
-    const handleEdit = (termToEdit) => {
-        setTerm(termToEdit.name); // Supondo que cada termo tem um campo "name"
-        setEditingTermId(termToEdit.id); // Configura o ID do termo em edição
+    const handleDeleteTerm = async (id) => {
+        if (window.confirm("Tem certeza que deseja excluir este termo?")) {
+            try {
+                await axios.delete(`http://localhost:8080/lexical/deleteTerm/${id}`);
+                // Atualiza a lista de termos
+                setTerms(terms.filter(t => t.id !== id));
+            } catch (error) {
+                setErrorMessage('Erro ao remover o termo. Tente novamente.');
+            }
+        }
     };
 
-    // Função para remover um termo
-    const handleDelete = async (termId) => {
-        try {
-            await axios.delete(`http://localhost:8080/terms/${termId}`);
-            loadTerms(); // Recarregar termos após remoção
-        } catch (error) {
-            console.error('Erro ao remover termo:', error);
-            setErrorMessage('Erro ao remover termo. Tente novamente.');
-        }
+    const handleEditTerm = (term) => {
+        setTerm(term.term);
+        setPolarity(term.polarity);
+        setEditingTermId(term.id);
     };
 
     return (
-        <div className="dashboard">
+        <div className="container">
             <h2>Dashboard</h2>
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    placeholder="Insira um novo termo"
+            <form onSubmit={handleAddOrUpdateTerm} className="term-form">
+                <input 
+                    type="text" 
+                    placeholder="Term"
                     value={term}
                     onChange={(e) => setTerm(e.target.value)}
-                    required
+                    className="term-input"
                 />
-                <button type="submit">{editingTermId ? 'Editar' : 'Adicionar'}</button>
+                <input 
+                    type="text" 
+                    placeholder="Polarity"
+                    value={polarity}
+                    onChange={(e) => setPolarity(e.target.value)}
+                    className="term-input"
+                />
+                <button type="submit" className="submit-button">{editingTermId ? 'Update' : 'Add'}</button>
             </form>
             {errorMessage && <p className="error">{errorMessage}</p>}
-            <table>
+            <table className="terms-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Termo</th>
-                        <th>Ações</th>
+                        <th>Term</th>
+                        <th>Polarity</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {terms.map((term) => (
-                        <tr key={term.id}>
-                            <td>{term.id}</td>
-                            <td>{term.name}</td>
-                            <td>
-                                <button onClick={() => handleEdit(term)}>Editar</button>
-                                <button onClick={() => handleDelete(term.id)}>Remover</button>
+                    {terms.map((t) => (
+                        <tr key={t.id}>
+                            <td>{t.term}</td>
+                            <td>{t.polarity}</td>
+                            <td className="actions">
+                                <button onClick={() => handleEditTerm(t)} className="edit-button">Edit</button>
+                                <button onClick={() => handleDeleteTerm(t.id)} className="delete-button">Delete</button>
                             </td>
                         </tr>
                     ))}
